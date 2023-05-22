@@ -6,6 +6,11 @@ const getFileDownloadUrl = require("../utils/getFileDownloadUrl");
 
 const router = express.Router();
 
+router.get("/", async (req, res) => {
+  const products = await Product.find();
+  res.send(products);
+});
+
 router.post("/", async (req, res) => {
   const { error } = validateProduct(req.body);
   if (error) return res.status(400).send(error.details[0].message);
