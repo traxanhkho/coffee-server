@@ -56,14 +56,7 @@ function validateProduct(product) {
     name: Joi.string().min(8).max(255).required(),
     genre: Joi.string().required(),
     description: Joi.string().required(),
-    toppings: Joi.array()
-      .items(
-        Joi.object({
-          name: Joi.string().required(),
-          price: Joi.number(),
-        })
-      )
-      .required(),
+    toppings: Joi.array(), 
     sizes: Joi.array()
       .items(
         Joi.object({
