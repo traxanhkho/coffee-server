@@ -47,9 +47,12 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
   let product = await Product.findById(productId);
   if (!product) return res.status(404).json({ message: "Product not found" });
 
-  product.image = fileUrl;
+  product.image = {
+    name: destination,
+    url: fileUrl,
+  };
 
-  await product.save();
+  product = await product.save();
 
   res.send(product);
 });

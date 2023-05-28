@@ -6,6 +6,9 @@ const genreSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  image: {
+    type: String,
+  },
 });
 
 const Genre = mongoose.model("genre", genreSchema);

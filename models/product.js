@@ -14,18 +14,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  toppings: [
-    new mongoose.Schema({
-      name: {
-        type: String,
-        required: true,
-      },
-      price: {
-        type: Number,
-        required: true,
-      },
-    }),
-  ],
+  toppings: [String],
   sizes: [
     new mongoose.Schema({
       name: {
@@ -51,7 +40,12 @@ const productSchema = new mongoose.Schema({
     default: Date.now,
   },
   image: {
-    type: String,
+    name: {
+      type: String,
+    },
+    url: {
+      type: String,
+    },
   },
 });
 
@@ -60,9 +54,7 @@ const Product = mongoose.model("Product", productSchema);
 function validateProduct(product) {
   const productSchema = Joi.object({
     name: Joi.string().min(8).max(255).required(),
-    genre: Joi.string()
-      .valid("drink", "snack", "another")
-      .required(),
+    genre: Joi.string().required(),
     description: Joi.string().required(),
     toppings: Joi.array()
       .items(
@@ -81,7 +73,7 @@ function validateProduct(product) {
       )
       .required(),
     price: Joi.number().required(),
-    numberInStock : Joi.number().required() 
+    numberInStock: Joi.number().required(),
   });
 
   return productSchema.validate(product);
