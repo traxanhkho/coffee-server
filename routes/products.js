@@ -15,31 +15,32 @@ router.get("/", async (req, res) => {
 const upload = multer({ dest: "uploads/" }); // Specify the destination folder for uploaded files
 
 router.post("/", upload.single("image"), async (req, res) => {
-  const product = JSON.parse(req.body);
-
-  const { error } = validateProduct(product);
-  if (error) return res.status(400).send(error.details[0].message);
-
-  let newProduct = new Product({
-    name: product.name,
-    genre: product.genre,
-    description: product.description,
-    toppings: product.toppings,
-    sizes: product.sizes,
-    price: product.price,
-    numberInStock: product.numberInStock,
-  });
-
-  const file = req.file; // Access the uploaded file via req.file
-  if (!file) return res.status(400).send("file is not define");
-
-  const destination = "product-" + Date.now() + "-" + file.originalname;
-
   try {
+    const product = JSON.parse(req.body);
+
+    const { error } = validateProduct(product);
+    if (error) return res.status(400).send(error.details[0].message);
+
+    let newProduct = new Product({
+      name: product.name,
+      genre: product.genre,
+      description: product.description,
+      toppings: product.toppings,
+      sizes: product.sizes,
+      price: product.price,
+      numberInStock: product.numberInStock,
+    });
+
+    const file = req.file; // Access the uploaded file via req.file
+    if (!file) return res.status(400).send("file is not define");
+
+    const destination = "product-" + Date.now() + "-" + file.originalname;
+
     // Perform further operations with the file and product ID
     const uploadedFiles = await bucket.upload(file.path, {
       destination,
     });
+
     const uploadedFile = uploadedFiles[0];
     const fileUrl = await getFileDownloadUrl(uploadedFile);
 
