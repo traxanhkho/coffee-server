@@ -11,30 +11,29 @@ router.get("/", async (req, res) => {
   res.send(products);
 });
 
-router.post("/", async (req, res) => {
-  const { error } = validateProduct(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
-
-  let product = new Product({
-    name: req.body.name,
-    genre: req.body.genre,
-    description: req.body.description,
-    toppings: req.body.toppings,
-    sizes: req.body.sizes,
-    price: req.body.price,
-    numberInStock: req.body.numberInStock,
-  });
-
-  product = await product.save();
-  res.send(product);
-});
-
 // Configure multer
 const upload = multer({ dest: "uploads/" }); // Specify the destination folder for uploaded files
 
-router.post("/upload-image", upload.single("image"), async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
+  const product = JSON.parse(req.body);
+
+
+  const { error } = validateProduct(product);
+  if (error) return res.status(400).send(error.details[0].message);
+
+
+  let newProduct = new Product({
+    name: product.name,
+    genre: product.genre,
+    description: product.description,
+    toppings: product.toppings,
+    sizes: product.sizes,
+    price: product.price,
+    numberInStock: product.numberInStock,
+  });
+
   const file = req.file; // Access the uploaded file via req.file
-  const productId = req.body.productId; // Access the product ID via req.body.productId
+  if(!file) return res.status(400).send('file is not define')
 
   const destination = "product-" + Date.now() + "-" + file.originalname;
   // Perform further operations with the file and product ID
@@ -44,17 +43,38 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
   const uploadedFile = uploadedFiles[0];
   const fileUrl = await getFileDownloadUrl(uploadedFile);
 
-  let product = await Product.findById(productId);
-  if (!product) return res.status(404).json({ message: "Product not found" });
-
-  product.image = {
-    name: destination,
+  newProduct.image = {
+    name: uploadedFile.name,  
     url: fileUrl,
   };
 
-  product = await product.save();
-
-  res.send(product);
+  newProduct = await newProduct.save();
+  res.send(newProduct);
 });
+
+// router.post("/upload-image", upload.single("image"), async (req, res) => {
+//   const file = req.file; // Access the uploaded file via req.file
+//   const productId = req.body.productId; // Access the product ID via req.body.productId
+
+//   const destination = "product-" + Date.now() + "-" + file.originalname;
+//   // Perform further operations with the file and product ID
+//   const uploadedFiles = await bucket.upload(file.path, {
+//     destination,
+//   });
+//   const uploadedFile = uploadedFiles[0];
+//   const fileUrl = await getFileDownloadUrl(uploadedFile);
+
+//   let product = await Product.findById(productId);
+//   if (!product) return res.status(404).json({ message: "Product not found" });
+
+//   product.image = {
+//     name: destination,
+//     url: fileUrl,
+//   };
+
+//   product = await product.save();
+
+//   res.send(product);
+// });
 
 module.exports = router;
