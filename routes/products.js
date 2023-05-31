@@ -16,7 +16,7 @@ const upload = multer({ dest: "uploads/" }); // Specify the destination folder f
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const product = JSON.parse(req.body);
+    return res.send(req.body);
 
     const { error } = validateProduct(product);
     if (error) return res.status(400).send(error.details[0].message);
