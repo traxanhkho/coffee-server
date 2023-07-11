@@ -3,8 +3,14 @@ const { Topping, validateTopping } = require("../models/topping");
 const bucket = require("../firebase/admin");
 const getFileDownloadUrl = require("../utils/getFileDownloadUrl");
 const multer = require("multer");
+const _ = require("lodash");
+const createFileStorage = require("../firebase/features/createFileStorage");
+const deleteFileStorage = require("../firebase/features/deleteFileStorage");
+const updateFileStorage = require("../firebase/features/updateFileStorage");
 
 const router = express.Router();
+
+const upload = multer({ dest: "uploads/" });
 
 router.get("/", async (req, res) => {
   const toppings = await Topping.find();
@@ -12,40 +18,64 @@ router.get("/", async (req, res) => {
   res.send(toppings);
 });
 
-router.post("/", async (req, res) => {
-  const { error } = validateTopping(req.body);
+router.post("/", upload.single("image"), async (req, res) => {
+  const toppingValidate = {
+    name: req.body.name,
+    price: req.body.price,
+  };
+  const { error } = validateTopping(toppingValidate);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let topping = new Topping({
+  let newTopping = new Topping({
     name: req.body.name,
     price: req.body.price,
   });
 
-  topping = await topping.save();
-  res.send(topping);
+  let image = {};
+  if (req.file) {
+    image = await createFileStorage(req.file);
+  }
+
+  newTopping.image = image;
+  newTopping = await newTopping.save();
+  res.send(newTopping);
 });
 
-// Configure multer
-const upload = multer({ dest: "uploads/" }); // Specify the destination folder for uploaded files
+router.delete("/:toppingId", async (req, res) => {
+  const toppingDeleted = await Topping.findByIdAndDelete(req.params.toppingId);
+  if (!toppingDeleted) return res.status(404).send("topping not found!");
 
-router.post("/upload-image", upload.single("image"), async (req, res) => {
-  const file = req.file; // Access the uploaded file via req.file
-  const toppingId = req.body.toppingId; // Access the topping ID via req.body.toppingId
+  await deleteFileStorage(toppingDeleted.image.name);
 
-  const destination = "topping-" + Date.now() + "-" + file.originalname;
-  // Perform further operations with the file and topping ID
-  const uploadedFiles = await bucket.upload(file.path, {
-    destination,
-  });
-  const uploadedFile = uploadedFiles[0];
-  const fileUrl = await getFileDownloadUrl(uploadedFile);
+  res.send(toppingDeleted);
+});
 
-  const topping = await Topping.findById(toppingId);
-  if (!topping) return res.status(404).json({ message: "Topping not found" });
+router.put("/:toppingId", upload.single("image"), async (req, res) => {
+  let topping = await Topping.findById(req.params.toppingId);
+  if (!topping)
+    return res.status(404).send("could not found this topping");
 
-  topping.image = fileUrl;
+  let toppingUpdate = { name: req.body.name, price: req.body.price };
+  
+  const { error } = validateTopping(toppingUpdate);
+  if (error) return res.status(400).send(error.details[0].message);
 
-  await topping.save();
+  let image = {};
+  if (req.file) {
+    if (topping["image"].name) {
+      image = await updateFileStorage(topping["image"].name, req.file);
+    } else {
+      image = await createFileStorage(req.file);
+    }
+
+    toppingUpdate.image = _.cloneDeep(image);
+  }
+
+  topping = await Topping.findByIdAndUpdate(
+    req.params.toppingId,
+    toppingUpdate,
+    { new: true }
+  );
 
   res.send(topping);
 });

@@ -1,10 +1,16 @@
+const config = require("config");
 const express = require("express");
 
 const app = express();
 
+if (!config.get("jwtPrivateKey")) {
+  console.error("FATAL ERRO: jwtPrivateKey is not defined.");
+  process.exit(1);
+}
+
 require("./firebase/admin");
-require('./startup/routers')(app) ; 
-require('./startup/db')() ; 
+require("./startup/routers")(app);
+require("./startup/db")();
 
 const port = process.env.PORT || 5000;
 

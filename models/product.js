@@ -52,11 +52,12 @@ const productSchema = new mongoose.Schema({
 const Product = mongoose.model("Product", productSchema);
 
 function validateProduct(product) {
+
   const productSchema = Joi.object({
     name: Joi.string().min(8).max(255).required(),
     genre: Joi.string().required(),
     description: Joi.string().required(),
-    toppings: Joi.array(), 
+    toppings: Joi.array(),
     sizes: Joi.array()
       .items(
         Joi.object({

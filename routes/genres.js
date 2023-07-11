@@ -1,38 +1,70 @@
 const express = require("express");
+const _ = require("lodash");
 const { Genre, validateGenre } = require("../models/genre");
 const multer = require("multer");
-const bucket = require("../firebase/admin");
-
+const createFileStorage = require("../firebase/features/createFileStorage");
+const updateFileStorage = require("../firebase/features/updateFileStorage");
+const deleteFileStorage = require("../firebase/features/deleteFileStorage");
 const router = express.Router();
+
+const upload = multer({ dest: "uploads/" });
 
 router.get("/", async (req, res) => {
   const genres = await Genre.find();
+  if (!genres) return res.status(400).send("genres is empty!");
+
   res.send(genres);
 });
 
-router.post("/", async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   const { error } = validateGenre(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const genre = new Genre({
+  const newGenre = new Genre({
     name: req.body.name,
   });
 
-  await genre.save();
+  let image = {};
+  if (req.file) {
+    image = await createFileStorage(req.file);
+    newGenre.image = _.cloneDeep(image);
+  }
 
-  res.send(genre);
-});
-
-router.put("/:genreId", async (req, res) => {
-  const { error } = validateGenre(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
-
-  const newGenre = await Genre.findByIdAndUpdate(req.params.genreId, req.body, {
-    new: true,
-  });
-  if (!newGenre) return res.status(404).send("Genre not found");
+  await newGenre.save();
 
   res.send(newGenre);
+});
+
+router.put("/:genreId", upload.single("image"), async (req, res) => {
+  const { error } = validateGenre(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
+  try {
+    let genreUpdate = await Genre.findById(req.params.genreId);
+    if (!genreUpdate) return res.status(404).send("Genre not found");
+
+    genreUpdate.name = req.body.name;
+
+    let image = {};
+    if (req.file) {
+      if (genreUpdate["image"].name) {
+        image = await updateFileStorage(genreUpdate["image"].name, req.file);
+      } else {
+        image = await createFileStorage(req.file);
+      }
+
+      genreUpdate.image = _.cloneDeep(image);
+    }
+
+    genreUpdate = await Genre.findByIdAndUpdate(
+      req.params.genreId,
+      _.cloneDeep(genreUpdate),
+      { new: true }
+    );
+
+    res.send(genreUpdate);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 router.get("/:genreId", async (req, res) => {
@@ -42,43 +74,18 @@ router.get("/:genreId", async (req, res) => {
   res.send(genre);
 });
 
+router.delete("/:genreId", async (req, res) => {
+  try {
+    let genreDeleted = await Genre.findByIdAndDelete(req.params.genreId);
+    if (!genreDeleted) return res.status(404).send("genre is not found!");
 
-// Configure multer
-const upload = multer({ dest: "uploads/" }); // Specify the destination folder for uploaded files
+    if (genreDeleted["image"].name)
+      deleteFileStorage(genreDeleted["image"].name);
 
-router.post("/upload-image", upload.single("image"), async (req, res) => {
-  const file = req.file; // Access the uploaded file via req.file
-  const genreId = req.body.genreId; // Access the product ID via req.body.productId
-
-  const destination = "genre-" + Date.now() + "-" + file.originalname;
-  // Perform further operations with the file and product ID
-  const uploadedFiles = await bucket.upload(file.path, {
-    destination,
-  });
-
-  const uploadedFile = uploadedFiles[0];
-  const fileUrl = await getFileDownloadUrl(uploadedFile);
-
-  let genre = await Genre.findById(genreId);
-  if (!genre) return res.status(404).json({ message: "Product not found" });
-
-  genre.image = {
-    name: destination,
-    url: fileUrl,
-  };
-
-  genre = await genre.save();
-
-  res.send(genre);
+    res.send(genreDeleted);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
-
-// router.delete('/:genreId' , async (req, res) =>{
-//    const genre =  await Genre.findByIdAndDelete(req.params.genreId) ; 
-//    if(!genre) return res.status(404).send('Genre not found') ; 
-
-//    await bucket.file('')
-
-//    res.send(genre) ; 
-// })
 
 module.exports = router;

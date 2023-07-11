@@ -10,4 +10,4 @@ admin.initializeApp({
 
 const bucket = getStorage().bucket();
 
-module.exports = bucket ; 
+module.exports = bucket;

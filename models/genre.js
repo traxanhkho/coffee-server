@@ -7,7 +7,12 @@ const genreSchema = new mongoose.Schema({
     required: true,
   },
   image: {
-    type: String,
+    name: {
+      type: String,
+    },
+    url: {
+      type: String,
+    },
   },
 });
 
