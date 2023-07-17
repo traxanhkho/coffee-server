@@ -8,6 +8,8 @@ if (!config.get("jwtPrivateKey")) {
   process.exit(1);
 }
 
+//test key ssh on ubuntu
+
 require("./firebase/admin");
 require("./startup/routers")(app);
 require("./startup/db")();
