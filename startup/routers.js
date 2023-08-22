@@ -8,6 +8,7 @@ const customers = require("../routes/customers");
 const locationVn = require("../routes/locationVn");
 const users = require("../routes/users");
 const auth = require("../routes/auth");
+const profiles = require("../routes/profiles");
 const bodyParser = require("body-parser");
 
 module.exports = function (app) {
@@ -23,4 +24,5 @@ module.exports = function (app) {
   app.use("/api/locationVn", locationVn);
   app.use("/api/users", users);
   app.use("/api/auth", auth);
+  app.use("/api/profiles", profiles);
 };

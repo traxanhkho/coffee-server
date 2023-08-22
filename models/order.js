@@ -9,6 +9,45 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Types.ObjectId,
     ref: Customer,
   },
+  orderShippingAddressInformation: {
+    name: {
+      type: String,
+      required: true,
+    },
+    numberPhone: {
+      type: String,
+      required: true,
+    },
+    address: {
+      city: {
+        id: {
+          type: String,
+        },
+        name: {
+          type: String,
+        },
+      },
+      district: {
+        id: {
+          type: String,
+        },
+        name: {
+          type: String,
+        },
+      },
+      ward: {
+        id: {
+          type: String,
+        },
+        name: {
+          type: String,
+        },
+      },
+      street: {
+        type: String,
+      },
+    },
+  },
   products: [
     {
       productId: {
@@ -16,8 +55,8 @@ const orderSchema = new mongoose.Schema({
         ref: Product,
       },
       size: {
-        type: String,
-        required: true,
+        type: mongoose.Types.ObjectId,
+        ref: Product,
       },
       totalAmount: {
         type: Number,
@@ -36,10 +75,11 @@ const orderSchema = new mongoose.Schema({
           quantity: {
             type: Number,
             required: true,
-            min: 1,
+            min: 0,
           },
         },
       ],
+      note: String,
     },
   ],
   status: {
@@ -47,7 +87,6 @@ const orderSchema = new mongoose.Schema({
     enum: ["pending", "processing", "completed", "cancelled"],
     default: "pending",
   },
-  note: String,
   totalAmount: Number,
   createdAt: {
     type: Date,
@@ -68,11 +107,18 @@ function validateOrderStatus(orderStatus) {
   return orderStatusSchema.validate(orderStatus);
 }
 
-
-
 function validateOrder(order) {
   const orderSchema = Joi.object({
-    customerId: Joi.string().required(),
+    orderShippingAddressInformation: Joi.object({
+      address: Joi.object({
+        city: Joi.string().required(),
+        district: Joi.string().required(),
+        street: Joi.string().required(),
+        ward: Joi.string().required(),
+      }),
+      name: Joi.string().required(),
+      numberPhone: Joi.string().required(),
+    }),
     status: Joi.string()
       .valid("pending", "processing", "completed", "cancelled")
       .default("pending"),
@@ -80,19 +126,19 @@ function validateOrder(order) {
       Joi.object({
         productId: Joi.string().required(),
         quantity: Joi.number().required().min(1),
-        size: Joi.string().required().default("vừa"),
+        size: Joi.string().required(),
         toppings: Joi.array().items(
           Joi.object({
-            toppingId: Joi.string().required(),
-            quantity: Joi.number().min(1).required(),
+            toppingId: Joi.string(),
+            quantity: Joi.number().min(0),
           })
         ),
+        note: Joi.string().allow('').optional(),
       })
     ),
-    note: Joi.string(),
   });
 
   return orderSchema.validate(order);
 }
 
-module.exports = { Order, validateOrder , validateOrderStatus };
+module.exports = { Order, validateOrder, validateOrderStatus };

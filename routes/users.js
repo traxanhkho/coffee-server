@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const _ = require("lodash");
 const express = require("express");
 const { validateUser, User } = require("../models/user");
+const { Profile } = require("../models/profile");
+const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
@@ -36,14 +38,24 @@ router.post("/", async (req, res) => {
   res
     .header("x-auth-token", token)
     .send(_.pick(user, ["_id", "name", "email"]));
+
+  const userId = new ObjectId(user._id);
+  const newProfile = await Profile({ userId });
+
+  await newProfile.save();
 });
 
 router.delete("/:userId", [auth, admin], async (req, res) => {
   try {
-    let userDeleted = await Genre.findByIdAndDelete(req.params.genreId);
-    if (!userDeleted) return res.status(404).send("User is not found!");
+    let userDeleted = await User.findByIdAndDelete(req.params.userId);
+    if (!userDeleted) return res.status(404).send("Could not found this User!");
 
     res.send(userDeleted);
+
+    await Profile.findOneAndDelete({
+      userId: userDeleted._id,
+    });
+
   } catch (error) {
     res.status(500).send(error);
   }

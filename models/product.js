@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const mongoose = require("mongoose");
+const { Topping } = require("./topping");
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -14,7 +15,12 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  toppings: [String],
+  toppings: [
+    {
+      type: mongoose.Types.ObjectId,
+      ref: Topping,
+    },
+  ],
   sizes: [
     new mongoose.Schema({
       name: {
@@ -52,7 +58,6 @@ const productSchema = new mongoose.Schema({
 const Product = mongoose.model("Product", productSchema);
 
 function validateProduct(product) {
-
   const productSchema = Joi.object({
     name: Joi.string().min(8).max(255).required(),
     genre: Joi.string().required(),

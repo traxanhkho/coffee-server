@@ -1,9 +1,29 @@
 const express = require("express");
 const _ = require("lodash");
-const { Order, validateOrderStatus } = require("../models/order");
+const auth = require("../middleware/auth");
+const getAddressFromVnLocation = require("../utils/getAddressFromVnLocation");
+
+const {
+  Order,
+  validateOrderStatus,
+  validateOrder,
+} = require("../models/order");
 const { default: mongoose } = require("mongoose");
 
 const router = express.Router();
+
+router.get("/getOrdersByCustomer", auth, async (req, res) => {
+  try {
+    const orders = await Order.find({ customerId: req.user._id })
+      .populate("customerId")
+      .populate("products.productId")
+      .populate("products.toppings.toppingId"); 
+
+    res.send(orders);
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
+});
 
 router.get("/:orderId", async (req, res) => {
   const order = await Order.findById(req.params.orderId)
@@ -16,13 +36,17 @@ router.get("/:orderId", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  let orders = await Order.find()
-    .populate("customerId")
-    .populate("products.productId")
-    .populate("products.toppings.toppingId");
+  try {
+    let orders = await Order.find()
+      .populate("customerId")
+      .populate("products.productId")
+      .populate("products.toppings.toppingId");
 
-  if (!orders) return res.status(400).send("order is empty!");
-  res.send(orders);
+    if (!orders) return res.status(400).send("order is empty!");
+    res.send(orders);
+  } catch (ex) {
+    res.status(500).send(`error message: ${ex}`);
+  }
 });
 
 router.get("/calculateTotalPrice/:orderId", async (req, res) => {
@@ -47,32 +71,45 @@ router.get("/calculateTotalPrice/:orderId", async (req, res) => {
   res.send({ totalPrice });
 });
 
-router.post("/", async (req, res) => {
-  const { error } = validateOrder(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+router.post("/", auth, async (req, res) => {
+  try {
+    const { error } = validateOrder(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
 
-  const shoppingCart = _.cloneDeep(req.body.products);
-
-  let convertShoppingCartObjectId = JSON.parse(
-    JSON.stringify(shoppingCart),
-    (key, value) => {
-      if (key === "productId" || key === "toppingId") {
-        return new mongoose.Types.ObjectId(value);
+    let convertShoppingCartObjectId = JSON.parse(
+      JSON.stringify(req.body.products),
+      (key, value) => {
+        if (key === "productId" || key === "toppingId" || key === "size") {
+          return new mongoose.Types.ObjectId(value);
+        }
+        return value;
       }
-      return value;
-    }
-  );
+    );
 
-  const order = new Order({
-    customerId: new mongoose.Types.ObjectId(req.body.customerId),
-    products: _.cloneDeep(convertShoppingCartObjectId),
-    note: req.body.note,
-    numberPhone: req.body.numberPhone,
-  });
+    const address = await getAddressFromVnLocation(
+      req.body.orderShippingAddressInformation.address.city,
+      req.body.orderShippingAddressInformation.address.district,
+      req.body.orderShippingAddressInformation.address.ward
+    );
 
-  const newOrder = await order.save();
+    address.street = req.body.orderShippingAddressInformation.address.street;
 
-  return res.send(newOrder);
+    const order = new Order({
+      customerId: new mongoose.Types.ObjectId(req.user._id),
+      orderShippingAddressInformation: {
+        name: req.body.orderShippingAddressInformation.name,
+        numberPhone: req.body.orderShippingAddressInformation.numberPhone,
+        address: _.cloneDeep(address),
+      },
+      products: _.cloneDeep(convertShoppingCartObjectId),
+    });
+
+    const newOrder = await order.save();
+
+    return res.send(newOrder);
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
 });
 
 router.delete("/:orderId", async (req, res) => {
@@ -91,7 +128,7 @@ router.put("/updateOrderStatus/:orderId", async (req, res) => {
   if (!order) return res.status(404).send("could not found this order");
 
   const orderUpdated = await Order.findByIdAndUpdate(
-    req.params.orderId,   
+    req.params.orderId,
     { status: req.body.status },
     { new: true }
   );

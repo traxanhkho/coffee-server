@@ -9,8 +9,21 @@ const deleteFileStorage = require("../firebase/features/deleteFileStorage");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const products = await Product.find();
-  res.send(products);
+  const { category } = req.query;
+
+  try {
+    let products;
+    // Use Mongoose to fetch products by category
+    if (category) {
+      products = await Product.find({ genre: category }).populate("toppings");
+    } else {
+      products = await Product.find().populate("toppings");
+    }
+    res.send(products);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    res.status(500).json({ error: "Unable to fetch products" });
+  }
 });
 
 // Configure multer
