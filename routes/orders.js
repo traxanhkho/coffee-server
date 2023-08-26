@@ -14,10 +14,9 @@ const router = express.Router();
 
 router.get("/getOrdersByCustomer", auth, async (req, res) => {
   try {
-    const orders = await Order.find({ customerId: req.user._id })
-      .populate("customerId")
+    let orders = await Order.find({ customerId: req.user._id })
       .populate("products.productId")
-      .populate("products.toppings.toppingId"); 
+      .populate("products.toppings.toppingId");
 
     res.send(orders);
   } catch (ex) {
@@ -26,13 +25,17 @@ router.get("/getOrdersByCustomer", auth, async (req, res) => {
 });
 
 router.get("/:orderId", async (req, res) => {
-  const order = await Order.findById(req.params.orderId)
-    .populate("products.productId")
-    .populate("products.toppings.toppingId");
+  try {
+    const order = await Order.findById(req.params.orderId)
+      .populate("products.productId")
+      .populate("products.toppings.toppingId");
 
-  if (!order) return res.status(404).send("could not found this order");
+    if (!order) return res.status(404).send("could not found this order");
 
-  res.send(order);
+    res.send(order);
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
 });
 
 router.get("/", async (req, res) => {
@@ -94,7 +97,7 @@ router.post("/", auth, async (req, res) => {
 
     address.street = req.body.orderShippingAddressInformation.address.street;
 
-    const order = new Order({
+    let order = new Order({
       customerId: new mongoose.Types.ObjectId(req.user._id),
       orderShippingAddressInformation: {
         name: req.body.orderShippingAddressInformation.name,
@@ -104,7 +107,11 @@ router.post("/", auth, async (req, res) => {
       products: _.cloneDeep(convertShoppingCartObjectId),
     });
 
-    const newOrder = await order.save();
+    order = await order.save();
+
+    const newOrder = await Order.findById(order._id)
+      .populate("products.productId")
+      .populate("products.toppings.toppingId");
 
     return res.send(newOrder);
   } catch (ex) {

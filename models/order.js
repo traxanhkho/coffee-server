@@ -83,9 +83,15 @@ const orderSchema = new mongoose.Schema({
     },
   ],
   status: {
-    type: String,
-    enum: ["pending", "processing", "completed", "cancelled"],
-    default: "pending",
+    type: Object,
+    enum: [
+      { name: "ordered", label: "Đã đặt hàng", step: 0 },
+      { name: "pending", label: "Đang xử lý", step: 1 },
+      { name: "processing", label: "Đang vận chuyển", step: 2 },
+      { name: "completed", label: "Đã giao hàng", step: 4 },
+      { name: "cancelled", label: "Giao hàng thất bại", step: 5 },
+    ],
+    default: { name: "ordered", label: "Đã đặt hàng", step: 0 },
   },
   totalAmount: Number,
   createdAt: {
@@ -119,9 +125,13 @@ function validateOrder(order) {
       name: Joi.string().required(),
       numberPhone: Joi.string().required(),
     }),
-    status: Joi.string()
-      .valid("pending", "processing", "completed", "cancelled")
-      .default("pending"),
+    status: Joi.object({
+      name: Joi.string()
+        .valid("ordered", "pending", "processing", "completed", "cancelled")
+        .required(),
+      label: Joi.string().required(),
+      step: Joi.number().integer().required(),
+    }).default(Joi.object({ name: "ordered", label: "Đã đặt hàng", step: 0 })),
     products: Joi.array().items(
       Joi.object({
         productId: Joi.string().required(),
@@ -133,7 +143,7 @@ function validateOrder(order) {
             quantity: Joi.number().min(0),
           })
         ),
-        note: Joi.string().allow('').optional(),
+        note: Joi.string().allow("").optional(),
       })
     ),
   });

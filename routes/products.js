@@ -26,6 +26,20 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/search", async (req, res) => {
+  const searchTerm = req.query.q;
+
+  try {
+    const results = await Product.find({
+      $or: [{ name: { $regex: searchTerm, $options: "i" } }],
+    });
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while searching." });
+  }
+});
+
 // Configure multer
 const upload = multer({ dest: "uploads/" });
 
@@ -76,9 +90,15 @@ router.delete("/:productId", async (req, res) => {
 });
 
 router.get("/:productId", upload.single("image"), async (req, res) => {
-  const product = await Product.findById(req.params.productId);
-  if (!product) res.status(404).send("product is not found");
-  res.send(product);
+  try {
+    const product = await Product.findById(req.params.productId).populate(
+      "toppings"
+    );
+    if (!product) return res.status(404).send("product is not found");
+    res.send(product);
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
 });
 
 router.put("/:productId", upload.single("image"), async (req, res) => {
