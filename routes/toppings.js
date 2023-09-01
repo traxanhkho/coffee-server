@@ -18,6 +18,34 @@ router.get("/", async (req, res) => {
   res.send(toppings);
 });
 
+router.get("/list", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) - 1 || 0;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const toppings = await Topping.find()
+      .skip(page * limit)
+      .limit(limit);
+
+    const allToppings = await Topping.find();
+
+    const total = await Topping.countDocuments();
+
+    const response = {
+      total,
+      allToppings: allToppings,
+      page: page + 1,
+      limit,
+      toppings,
+    };
+
+    res.send(response);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: true, message: "Internal Server Error" });
+  }
+});
+
 router.post("/", upload.single("image"), async (req, res) => {
   const toppingValidate = {
     name: req.body.name,
@@ -52,11 +80,10 @@ router.delete("/:toppingId", async (req, res) => {
 
 router.put("/:toppingId", upload.single("image"), async (req, res) => {
   let topping = await Topping.findById(req.params.toppingId);
-  if (!topping)
-    return res.status(404).send("could not found this topping");
+  if (!topping) return res.status(404).send("could not found this topping");
 
   let toppingUpdate = { name: req.body.name, price: req.body.price };
-  
+
   const { error } = validateTopping(toppingUpdate);
   if (error) return res.status(400).send(error.details[0].message);
 

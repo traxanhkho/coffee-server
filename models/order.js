@@ -103,12 +103,11 @@ const orderSchema = new mongoose.Schema({
 const Order = mongoose.model("order", orderSchema);
 
 function validateOrderStatus(orderStatus) {
-  const orderStatusSchema = Joi.string().valid(
-    "pending",
-    "processing",
-    "completed",
-    "cancelled"
-  );
+  const orderStatusSchema = Joi.object({
+    name: Joi.string().required(),
+    label: Joi.string().required(),
+    step: Joi.number().required(),
+  })
 
   return orderStatusSchema.validate(orderStatus);
 }

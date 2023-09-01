@@ -8,6 +8,8 @@ const {
   validateOrderStatus,
   validateOrder,
 } = require("../models/order");
+
+const { Product } = require("../models/product");
 const { default: mongoose } = require("mongoose");
 
 const router = express.Router();
@@ -38,17 +40,51 @@ router.get("/:orderId", async (req, res) => {
   }
 });
 
+// router.get("/", async (req, res) => {
+//   try {
+//     let orders = await Order.find()
+//       .populate("customerId")
+//       .populate("products.productId")
+//       .populate("products.toppings.toppingId");
+
+//     if (!orders) return res.status(400).send("order is empty!");
+//     res.send(orders);
+//   } catch (ex) {
+//     res.status(500).send(`error message: ${ex}`);
+//   }
+// });
+
 router.get("/", async (req, res) => {
   try {
-    let orders = await Order.find()
+    const page = parseInt(req.query.page) - 1 || 0;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const orders = await Order.find()
+      .skip(page * limit)
+      .limit(limit)
       .populate("customerId")
       .populate("products.productId")
       .populate("products.toppings.toppingId");
 
-    if (!orders) return res.status(400).send("order is empty!");
-    res.send(orders);
-  } catch (ex) {
-    res.status(500).send(`error message: ${ex}`);
+    const allOrders = await Order.find()
+      .populate("customerId")
+      .populate("products.productId")
+      .populate("products.toppings.toppingId");
+
+    const total = await Order.countDocuments();
+
+    const response = {
+      total,
+      allOrders,
+      page: page + 1,
+      limit,
+      orders,
+    };
+
+    res.send(response);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: true, message: "Internal Server Error" });
   }
 });
 
@@ -120,10 +156,15 @@ router.post("/", auth, async (req, res) => {
 });
 
 router.delete("/:orderId", async (req, res) => {
-  const orderDeleted = await Order.findByIdAndDelete(req.params.orderId);
-  if (!orderDeleted) return res.status(404).send("could not found this order");
+  try {
+    const orderDeleted = await Order.findByIdAndDelete(req.params.orderId);
+    if (!orderDeleted)
+      return res.status(404).send("could not found this order");
 
-  res.send(orderDeleted);
+    res.send(orderDeleted);
+  } catch (ex) {
+    res.status(400).send(ex);
+  }
 });
 
 router.put("/updateOrderStatus/:orderId", async (req, res) => {

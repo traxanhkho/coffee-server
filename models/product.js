@@ -1,6 +1,7 @@
 const Joi = require("joi");
 const mongoose = require("mongoose");
 const { Topping } = require("./topping");
+const { Genre } = require("./genre");
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -8,8 +9,8 @@ const productSchema = new mongoose.Schema({
     required: true,
   },
   genre: {
-    type: String,
-    required: true,
+    type: mongoose.Types.ObjectId,
+    ref: Genre,
   },
   description: {
     type: String,
