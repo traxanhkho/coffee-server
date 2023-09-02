@@ -1,11 +1,11 @@
 const admin = require("firebase-admin");
 const { getStorage } = require("firebase-admin/storage");
 
-const serviceAccount = require("./path/to/serviceAccountKey.json");
+const serviceAccount = require("../etc/secrets/serviceAccountKey.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: "gs://coffee-server-4f96c.appspot.com",
+  storageBucket: process.env.STORAGE_BUCKET,
 });
 
 const bucket = getStorage().bucket();
